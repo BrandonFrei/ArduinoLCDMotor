@@ -8,14 +8,16 @@
 const uint16_t stepsPerRevolution = 2048;  // change this to fit the number of steps per revolution
 // for your motor
 
-uint8_t lcdD4Pin = 5;
-uint8_t lcdD5Pin = 4;
-uint8_t lcdD6Pin = 3;
-uint8_t lcdD7Pin = 2;
+uint8_t buttonPin = 2;
+uint8_t lcdD4Pin = 6;
+uint8_t lcdD5Pin = 5;
+uint8_t lcdD6Pin = 4;
+uint8_t lcdD7Pin = 3;
 uint8_t lcdEPin = 12;
 uint8_t lcdRSPin = 13;
 volatile uint8_t switchDirection = 0;
 uint8_t flag = 1;
+uint8_t toggleDirection = 0;
 enum directions{Clockwise, CounterClockwise};
 
 void TaskMotor( void *pvParameters );
@@ -26,8 +28,11 @@ Stepper myStepper(stepsPerRevolution, 8,10,11,9);
 LiquidCrystal lcd(lcdRSPin, lcdEPin, lcdD4Pin, lcdD5Pin, lcdD6Pin, lcdD7Pin);
 
 void setup() {
-  
+
+  pinMode(buttonPin, INPUT_PULLUP);
   cli();//stop interrupts
+
+  attachInterrupt(digitalPinToInterrupt(buttonPin), pinPushedISR, RISING);
 
 //set timer1 interrupt at 1Hz
   TCCR1A = 0;// set entire TCCR1A register to 0
@@ -84,24 +89,28 @@ void TaskTimer(void *pvParameters) {
   }
 }
 */
+
+//this thread
 void TaskMotor(void *pvParameters) {
   (void) pvParameters;
  
   myStepper.setSpeed(9);
   for(;;) {
     switchDirection = 1;
-    Serial.print(switchDirection);
     myStepper.step(stepsPerRevolution);
     
     
     switchDirection = 0;
-    Serial.print(switchDirection);
     myStepper.step(-stepsPerRevolution);
     
     vTaskDelay(1);
   }
 }
 ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
+    if(toggleDirection){
+      Serial.write("Pin has been pushed.\n");
+      toggleDirection = 0;  
+    }
     if(flag) {
       lcd.setCursor(0,0);
       lcd.clear();
@@ -117,3 +126,15 @@ ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
     }
 }
 
+void pinPushedISR(){
+  toggleDirection = 1;
+}
+
+
+
+
+
+
+
+
+//===========================================example code===========================================
