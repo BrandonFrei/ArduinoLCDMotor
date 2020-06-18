@@ -5,6 +5,11 @@
 
 #define portCHAR char
 
+#undef autonomousSwitching
+#define manualSwitching
+
+
+
 const uint16_t stepsPerRevolution = 2048;  // change this to fit the number of steps per revolution
 // for your motor
 
@@ -62,35 +67,7 @@ void loop() {
  
 }
 
-/*
-void TaskTimer(void *pvParameters) {
-  (void) pvParameters;
-  Serial.begin(9600);
- 
-  lcd.begin(16,2);
-  lcd.print("hello, world");
-
-  for(;;) {
-    if(flag) {
-      flag = 0;
-      lcd.setCursor(0,0);
-      Serial.print("Half a second...");
-      if(switchDirection){
-        direction = "CounterClockwise";
-        Serial.print("Counter");
-      }
-      else {
-        direction = "ClockWise";
-        Serial.print("Clockwise");
-      }
-      lcd.print(direction);
-      vTaskDelay(1);
-    }
-  }
-}
-*/
-
-//this thread
+#ifdef autonomousSwitching
 void TaskMotor(void *pvParameters) {
   (void) pvParameters;
  
@@ -106,11 +83,26 @@ void TaskMotor(void *pvParameters) {
     vTaskDelay(1);
   }
 }
-ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
-    if(toggleDirection){
-      Serial.write("Pin has been pushed.\n");
-      toggleDirection = 0;  
+#endif
+
+#ifdef manualSwitching
+void TaskMotor(void *pvParameters) {
+  (void) pvParameters;
+ 
+  myStepper.setSpeed(9);
+  for(;;) {
+    if(toggleDirection) {
+      myStepper.step(1);
+      switchDirection = 1;
     }
+    else {
+      myStepper.step(-1);
+      switchDirection = 0;
+    }
+  }
+}
+#endif
+ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
     if(flag) {
       lcd.setCursor(0,0);
       lcd.clear();
@@ -127,7 +119,7 @@ ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
 }
 
 void pinPushedISR(){
-  toggleDirection = 1;
+  toggleDirection = !toggleDirection;
 }
 
 
